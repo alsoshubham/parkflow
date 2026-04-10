@@ -1,13 +1,17 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Car, MapPin, Clock, Search, ChevronRight, Check, ArrowRight,
-  ParkingSquare, Navigation, Ban, Shield, Zap, TrendingUp,
-  Phone, Mail, Facebook, Twitter, Instagram, Youtube,
+  Car, MapPin, Search, ChevronRight, ArrowRight,
+  ParkingSquare, Navigation, Ban, Shield,
+  Facebook, Twitter, Instagram, Youtube,
   Users, BarChart3, CreditCard, Smartphone
 } from 'lucide-react';
+import LoginModal from '../../components/common/LoginModal';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [modalOpen, setModalOpen] = useState(false);
+  const openLogin = () => setModalOpen(true);
 
   return (
     <div className="lp">
@@ -25,7 +29,7 @@ export default function LandingPage() {
             <a href="#features">Features</a>
             <a href="#contact">Contact</a>
           </div>
-          <button className="lp-login-btn" onClick={() => navigate('/login')}>
+          <button className="lp-login-btn" onClick={openLogin}>
             Login / Sign Up
           </button>
         </div>
@@ -33,12 +37,8 @@ export default function LandingPage() {
 
       {/* ══════ HERO ══════ */}
       <section className="lp-hero" id="hero">
-        {/* City skyline SVG */}
-        <div className="lp-skyline">
-          <svg viewBox="0 0 1440 320" preserveAspectRatio="none">
-            <path d="M0,320 L0,220 L40,220 L40,180 L60,180 L60,160 L80,160 L80,180 L100,180 L100,140 L110,100 L120,140 L140,140 L140,120 L160,120 L160,140 L180,140 L180,200 L220,200 L220,150 L240,150 L240,120 L260,60 L280,120 L280,150 L300,150 L300,200 L340,200 L340,170 L360,170 L360,140 L380,80 L400,140 L400,170 L420,170 L420,190 L460,190 L460,160 L480,160 L480,130 L500,50 L520,130 L520,160 L540,160 L540,200 L580,200 L580,170 L600,170 L600,150 L620,150 L620,100 L630,60 L640,100 L640,150 L660,150 L660,180 L700,180 L700,140 L720,140 L720,110 L740,40 L760,110 L760,140 L780,140 L780,200 L820,200 L820,160 L840,160 L840,130 L860,130 L860,100 L870,60 L880,100 L880,130 L900,130 L900,190 L940,190 L940,160 L960,160 L960,120 L980,70 L1000,120 L1000,160 L1020,160 L1020,190 L1060,190 L1060,150 L1080,150 L1080,120 L1100,80 L1120,120 L1120,150 L1140,150 L1140,200 L1180,200 L1180,170 L1200,170 L1200,130 L1220,90 L1240,130 L1240,170 L1260,170 L1260,210 L1300,210 L1300,180 L1320,180 L1320,150 L1340,150 L1340,120 L1350,80 L1360,120 L1360,150 L1380,150 L1380,200 L1440,200 L1440,320 Z" fill="rgba(0,0,0,0.25)"/>
-          </svg>
-        </div>
+        {/* Hero background image */}
+        <div className="lp-hero-img" />
 
         <div className="lp-wrap lp-hero-content">
           <div className="lp-hero-text">
@@ -46,7 +46,7 @@ export default function LandingPage() {
             <p className="lp-hero-hindi">स्मार्ट पार्किंग, स्मार्ट शहर</p>
             <p className="lp-hero-sub">Find, book, and pay for parking in seconds. Real-time availability across all locations.</p>
             <div className="lp-hero-btns">
-              <button className="lp-btn-primary" onClick={() => navigate('/login')}>
+              <button className="lp-btn-primary" onClick={openLogin}>
                 Find Parking Now
               </button>
               <button className="lp-btn-outline" onClick={() => document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })}>
@@ -55,54 +55,9 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
-
-        {/* Real-Time Stats Bar */}
-        <div className="lp-wrap">
-          <div className="lp-live-stats">
-            <div className="lp-live-header">
-              <div className="lp-live-dot" />
-              <span>Real-Time Parking Status</span>
-            </div>
-            <div className="lp-live-grid">
-              <div className="lp-live-map">
-                <div className="lp-map-placeholder">
-                  <div className="lp-map-grid">
-                    {Array.from({length: 40}).map((_, i) => (
-                      <div key={i} className={`lp-map-dot ${['avail','avail','avail','occ','occ','avail','avail','occ','avail','avail'][i % 10]}`} />
-                    ))}
-                  </div>
-                </div>
-              </div>
-              <div className="lp-live-info">
-                <div className="lp-stat-row">
-                  <span className="lp-stat-label">Available Spots:</span>
-                  <span className="lp-stat-val highlight">3,245</span>
-                </div>
-                <div className="lp-stat-row">
-                  <span className="lp-stat-label">Occupancy Rate:</span>
-                  <span className="lp-stat-val">78%</span>
-                </div>
-                <div className="lp-stat-row">
-                  <span className="lp-stat-label">Average Search Time:</span>
-                  <span className="lp-stat-val highlight">&lt;5 mins</span>
-                </div>
-                <div className="lp-stat-row">
-                  <span className="lp-stat-label">Active Zones:</span>
-                  <span className="lp-stat-val">12</span>
-                </div>
-                <div className="lp-stat-legend">
-                  <span><span className="lp-legend-dot green" /> Available</span>
-                  <span><span className="lp-legend-dot red" /> Limited</span>
-                </div>
-                <div className="lp-stat-search">
-                  <input placeholder="Search for specific locations..." />
-                  <Search size={16} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </section>
+
+
 
       {/* ══════ HOW IT WORKS ══════ */}
       <section className="lp-section lp-section-light" id="how-it-works">
@@ -226,7 +181,7 @@ export default function LandingPage() {
         <div className="lp-wrap lp-cta-inner">
           <h2>Ready to park smarter?</h2>
           <p>Join thousands of drivers who save time every day with ParkFlow.</p>
-          <button className="lp-btn-primary large" onClick={() => navigate('/login')}>
+          <button className="lp-btn-primary large" onClick={openLogin}>
             Get Started — It's Free <ArrowRight size={18} />
           </button>
         </div>
@@ -275,6 +230,8 @@ export default function LandingPage() {
           </div>
         </div>
       </footer>
+      {/* ══════ LOGIN MODAL ══════ */}
+      {modalOpen && <LoginModal onClose={() => setModalOpen(false)} />}
     </div>
   );
 }

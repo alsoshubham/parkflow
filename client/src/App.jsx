@@ -18,7 +18,7 @@ import LandingPage from './pages/landing/LandingPage';
 
 function ProtectedRoute({ children, roles }) {
   const { user } = useAuth();
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   return children;
 }

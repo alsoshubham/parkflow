@@ -31,7 +31,7 @@ export default function AppLayout() {
   const handleLogout = () => {
     logout();
     toast.success('Logged out successfully');
-    navigate('/login');
+    navigate('/');
   };
 
   const avatarInitials = user?.name?.split(' ').map(n => n[0]).join('').slice(0,2).toUpperCase() || 'U';
