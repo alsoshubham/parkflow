@@ -1,5 +1,10 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import config from './config/index.js';
 import { errorHandler } from './middleware/auth.js';
 
@@ -42,6 +47,13 @@ app.use('/api/reports', reportsRoutes);
 
 // Error handler
 app.use(errorHandler);
+
+// Serve Static Frontend
+app.use(express.static(path.join(__dirname, '../../dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../dist/index.html'));
+});
 
 // Start server
 app.listen(config.port, () => {
