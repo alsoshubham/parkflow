@@ -14,6 +14,7 @@ export const lotsController = {
   create(req, res) {
     const lot = { ...req.body, id: db.genId('l'), status: 'active' };
     db.lots.push(lot);
+    db.save();
     res.status(201).json(lot);
   },
 
@@ -21,6 +22,7 @@ export const lotsController = {
     const idx = db.lots.findIndex(l => l.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Lot not found' });
     db.lots[idx] = { ...db.lots[idx], ...req.body };
+    db.save();
     res.json(db.lots[idx]);
   },
 
@@ -28,6 +30,7 @@ export const lotsController = {
     const idx = db.lots.findIndex(l => l.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Lot not found' });
     db.lots.splice(idx, 1);
+    db.save();
     res.json({ message: 'Lot deleted' });
   },
 };

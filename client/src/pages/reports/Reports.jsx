@@ -1,10 +1,41 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BarChart3, Download, TrendingUp, ParkingSquare, CreditCard, CalendarCheck } from 'lucide-react';
 import {
   BarChart, Bar, LineChart, Line, AreaChart, Area, PieChart, Pie, Cell,
   ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid
 } from 'recharts';
-import { REVENUE_CHART, MONTHLY_REVENUE, OCCUPANCY_TREND } from '../../store/mockData';
+import { api } from '../../utils/api';
+
+const REVENUE_CHART = [
+  { day: 'Mon', revenue: 8200, bookings: 42 },
+  { day: 'Tue', revenue: 9400, bookings: 51 },
+  { day: 'Wed', revenue: 7800, bookings: 38 },
+  { day: 'Thu', revenue: 11200, bookings: 62 },
+  { day: 'Fri', revenue: 14600, bookings: 80 },
+  { day: 'Sat', revenue: 18900, bookings: 105 },
+  { day: 'Sun', revenue: 16400, bookings: 91 },
+];
+
+const MONTHLY_REVENUE = [
+  { month: 'Nov', revenue: 285000 },
+  { month: 'Dec', revenue: 312000 },
+  { month: 'Jan', revenue: 298000 },
+  { month: 'Feb', revenue: 334000 },
+  { month: 'Mar', revenue: 356000 },
+  { month: 'Apr', revenue: 189000 },
+];
+
+const OCCUPANCY_TREND = [
+  { hour: '06:00', nexus: 22, techpark: 18, city: 35, airport: 45 },
+  { hour: '08:00', nexus: 68, techpark: 75, city: 52, airport: 62 },
+  { hour: '10:00', nexus: 82, techpark: 90, city: 64, airport: 58 },
+  { hour: '12:00', nexus: 76, techpark: 88, city: 79, airport: 72 },
+  { hour: '14:00', nexus: 70, techpark: 85, city: 68, airport: 68 },
+  { hour: '16:00', nexus: 85, techpark: 78, city: 72, airport: 75 },
+  { hour: '18:00', nexus: 92, techpark: 60, city: 88, airport: 80 },
+  { hour: '20:00', nexus: 78, techpark: 30, city: 72, airport: 70 },
+  { hour: '22:00', nexus: 45, techpark: 15, city: 40, airport: 55 },
+];
 
 const TABS = ['Revenue', 'Occupancy', 'Bookings'];
 
@@ -16,15 +47,25 @@ const BOOKING_FUNNEL = [
   { stage: 'Confirmed', value: 468 },
 ];
 
-const LOT_REVENUE_SHARE = [
-  { name: 'Nexus Mall', value: 32, color: '#3b82f6' },
-  { name: 'Tech Park', value: 28, color: '#8b5cf6' },
-  { name: 'City Centre', value: 22, color: '#10b981' },
-  { name: 'Airport Hub', value: 18, color: '#f59e0b' },
-];
-
 export default function Reports() {
   const [tab, setTab] = useState('Revenue');
+  const [summary, setSummary] = useState(null);
+  const [revenueByLot, setRevenueByLot] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/reports/summary'),
+      api.get('/reports/revenue-by-lot')
+    ]).then(([sumData, revData]) => {
+      setSummary(sumData);
+      setRevenueByLot(revData.map((item, i) => ({
+        ...item,
+        color: ['#3b82f6','#8b5cf6','#10b981','#f59e0b'][i % 4]
+      })));
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
 
   const handleExport = () => {
     const csv = 'Day,Revenue,Bookings\n' + REVENUE_CHART.map(r => `${r.day},${r.revenue},${r.bookings}`).join('\n');
@@ -34,6 +75,8 @@ export default function Reports() {
     a.download = 'parkflow_report.csv';
     a.click();
   };
+
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Loading reports...</div>;
 
   return (
     <div>
@@ -52,27 +95,25 @@ export default function Reports() {
       {/* Summary Stats */}
       <div className="stats-grid" style={{ marginBottom: 24 }}>
         <div className="glass-card stat-card emerald">
-          <div className="stat-label">Monthly Revenue</div>
-          <div className="stat-value">₹3.56L</div>
+          <div className="stat-label">Total Revenue</div>
+          <div className="stat-value">₹{(summary.totalRevenue || 0).toLocaleString()}</div>
           <div className="stat-change"><TrendingUp size={12} />+6.5% vs last month</div>
           <div className="stat-icon"><CreditCard size={48} /></div>
         </div>
         <div className="glass-card stat-card blue">
           <div className="stat-label">Total Bookings</div>
-          <div className="stat-value">468</div>
+          <div className="stat-value">{summary.totalBookings}</div>
           <div className="stat-change"><TrendingUp size={12} />+12% this month</div>
           <div className="stat-icon"><CalendarCheck size={48} /></div>
         </div>
         <div className="glass-card stat-card amber">
-          <div className="stat-label">Avg Occupancy</div>
-          <div className="stat-value">72%</div>
-          <div className="stat-change"><TrendingUp size={12} />+3% vs avg</div>
+          <div className="stat-label">System Users</div>
+          <div className="stat-value">{summary.totalUsers}</div>
           <div className="stat-icon"><ParkingSquare size={48} /></div>
         </div>
         <div className="glass-card stat-card purple" style={{ '--color-purple': '#8b5cf6' }}>
-          <div className="stat-label">Avg Revenue/Spot</div>
-          <div className="stat-value">₹510</div>
-          <div className="stat-change"><TrendingUp size={12} />+8% efficiency</div>
+          <div className="stat-label">Active Lots</div>
+          <div className="stat-value">{summary.totalLots}</div>
           <div className="stat-icon"><BarChart3 size={48} /></div>
         </div>
       </div>
@@ -124,8 +165,8 @@ export default function Reports() {
             <div style={{ height: 260, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
-                  <Pie data={LOT_REVENUE_SHARE} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="value" label={({ name, value }) => `${name} ${value}%`}>
-                    {LOT_REVENUE_SHARE.map((entry, i) => (
+                  <Pie data={revenueByLot} cx="50%" cy="50%" innerRadius={60} outerRadius={100} paddingAngle={4} dataKey="revenue" label={({ name, value }) => `${name} ₹${value}`}>
+                    {revenueByLot.map((entry, i) => (
                       <Cell key={i} fill={entry.color} />
                     ))}
                   </Pie>

@@ -20,6 +20,7 @@ export const sessionsController = {
       amount: null,
     };
     db.sessions.push(session);
+    db.save();
     res.status(201).json(session);
   },
 
@@ -38,6 +39,7 @@ export const sessionsController = {
       status: 'closed',
       amount,
     };
+    db.save();
 
     res.json(db.sessions[idx]);
   },

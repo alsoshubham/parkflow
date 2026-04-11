@@ -1,15 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CreditCard, Search, Download, Eye, TrendingUp } from 'lucide-react';
-import { PAYMENTS, BOOKINGS, LOTS } from '../../store/mockData';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../utils/api';
 
 export default function Payments() {
   const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [payments, setPayments] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [lots, setLots] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/payments'),
+      api.get('/bookings'),
+      api.get('/lots')
+    ]).then(([pData, bData, lData]) => {
+      setPayments(pData);
+      setBookings(bData);
+      setLots(lData);
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
 
   const isAdmin = ['Admin', 'Operator'].includes(user?.role);
-  const payments = isAdmin ? PAYMENTS : PAYMENTS.filter(p => p.userId === user?.id);
+
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Loading payments...</div>;
 
   const filtered = payments.filter(p => {
     const matchFilter = filter === 'all' || p.status === filter;
@@ -21,9 +39,9 @@ export default function Payments() {
   });
 
   const getLotFromBooking = (bookingId) => {
-    const b = BOOKINGS.find(bk => bk.id === bookingId);
+    const b = bookings.find(bk => bk.id === bookingId);
     if (!b) return '-';
-    return LOTS.find(l => l.id === b.lotId)?.name || '-';
+    return lots.find(l => l.id === b.lotId)?.name || '-';
   };
 
   const total = filtered.reduce((s, p) => s + (p.status === 'success' ? p.amount : 0), 0);

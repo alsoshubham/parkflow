@@ -1,10 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, CreditCard, Car, MapPin, Clock, QrCode, Download } from 'lucide-react';
-import { SPOTS } from '../../store/mockData';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import toast from 'react-hot-toast';
+import { api } from '../../utils/api';
 
 const STEPS = ['Select Spot', 'Your Details', 'Payment'];
 
@@ -61,6 +61,19 @@ export default function BookingFlow() {
   const [payMethod, setPayMethod] = useState('card');
   const [processing, setProcessing] = useState(false);
   const [bookingId, setBookingId] = useState(null);
+  const [availableSpots, setAvailableSpots] = useState([]);
+
+  useEffect(() => {
+    if (lot) {
+      setAvailableSpots(
+        Array.from({ length: Math.min(40, lot.totalSpots || 40) }).map((_, i) => ({
+          id: `${lot.id}-${i + 1}`,
+          label: `A${i + 1}`,
+          status: Math.random() > 0.3 ? 'available' : 'occupied'
+        })).filter(s => s.status === 'available')
+      );
+    }
+  }, [lot]);
 
   if (!lot) return (
     <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
@@ -68,18 +81,34 @@ export default function BookingFlow() {
     </div>
   );
 
-  const availableSpots = SPOTS.filter(s => s.lotId === lot.id && s.status === 'available');
-
   const handlePayment = async (e) => {
     e.preventDefault();
     setProcessing(true);
-    await new Promise(r => setTimeout(r, 2000));
-    const id = `BK-2024-${String(Date.now()).slice(-4)}`;
-    setBookingId(id);
-    setStep(3);
-    setProcessing(false);
-    addNotification({ type: 'booking', title: 'Booking Confirmed!', desc: `${id} for ${lot.name} – ₹${estimate}` });
-    toast.success('Booking confirmed! 🎉');
+    try {
+        const booking = await api.post('/bookings', {
+            lotId: lot.id,
+            vehicleNo,
+            startTime: `${date}T${fromTime}:00Z`,
+            endTime: `${date}T${toTime}:00Z`,
+            amount: estimate
+        });
+        
+        await api.post('/payments', {
+            bookingId: booking.id,
+            amount: estimate,
+            method: payMethod === 'card' ? 'Card' : payMethod === 'upi' ? 'UPI' : 'Net Banking',
+            status: 'success'
+        });
+        
+        setBookingId(booking.id);
+        setStep(3);
+        addNotification({ type: 'booking', title: 'Booking Confirmed!', desc: `${booking.id} for ${lot.name} – ₹${estimate}` });
+        toast.success('Booking confirmed! 🎉');
+    } catch (e) {
+        toast.error('Booking failed: ' + e.message);
+    } finally {
+        setProcessing(false);
+    }
   };
 
   if (step === 3 && bookingId) {

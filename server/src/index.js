@@ -56,14 +56,18 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(config.port, () => {
-  console.log(`
-  🚗 ParkFlow API Server
-  ──────────────────────
-  Port:    ${config.port}
-  Mode:    ${config.nodeEnv}
-  URL:     http://localhost:${config.port}
-  Health:  http://localhost:${config.port}/api/health
-  ──────────────────────
-  `);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(config.port, () => {
+    console.log(`
+    🚗 ParkFlow API Server
+    ──────────────────────
+    Port:    ${config.port}
+    Mode:    ${config.nodeEnv}
+    URL:     http://localhost:${config.port}
+    Health:  http://localhost:${config.port}/api/health
+    ──────────────────────
+    `);
+  });
+}
+
+export default app;

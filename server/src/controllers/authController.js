@@ -1,12 +1,17 @@
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcryptjs';
 import config from '../config/index.js';
 import { db } from '../models/data.js';
 
 export const authController = {
   login(req, res) {
     const { email, password } = req.body;
-    const user = db.users.find(u => u.email === email && u.password === password);
-    if (!user) return res.status(401).json({ error: 'Invalid email or password' });
+    const user = db.users.find(u => u.email === email);
+    
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+    
     if (user.status !== 'active') return res.status(403).json({ error: 'Account is inactive' });
 
     const token = jwt.sign(

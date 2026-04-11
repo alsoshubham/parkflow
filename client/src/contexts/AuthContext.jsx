@@ -1,25 +1,46 @@
-import { createContext, useContext, useState } from 'react';
-import { DEMO_USERS } from '../store/mockData';
+import { createContext, useContext, useState, useEffect } from 'react';
+import { api } from '../utils/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email, password) => {
-    const found = DEMO_USERS.find(u => u.email === email && u.password === password);
-    if (found) {
-      setUser(found);
-      return { success: true };
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      api.get('/auth/me').then(userData => {
+        setUser(userData);
+      }).catch(() => {
+        localStorage.removeItem('token');
+      }).finally(() => {
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
     }
-    return { success: false, error: 'Invalid email or password' };
+  }, []);
+
+  const login = async (email, password) => {
+    try {
+      const data = await api.post('/auth/login', { email, password });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   };
 
-  const logout = () => setUser(null);
+  const logout = () => {
+    localStorage.removeItem('token');
+    setUser(null);
+  };
 
   return (
     <AuthContext.Provider value={{ user, login, logout }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }

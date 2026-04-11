@@ -25,6 +25,7 @@ export const bookingsController = {
       createdAt: new Date().toISOString(),
     };
     db.bookings.push(booking);
+    db.save();
     res.status(201).json(booking);
   },
 
@@ -32,6 +33,7 @@ export const bookingsController = {
     const idx = db.bookings.findIndex(b => b.id === req.params.id);
     if (idx === -1) return res.status(404).json({ error: 'Booking not found' });
     db.bookings[idx].status = 'cancelled';
+    db.save();
     res.json(db.bookings[idx]);
   },
 };

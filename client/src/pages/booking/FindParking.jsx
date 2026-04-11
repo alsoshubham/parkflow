@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, MapPin, Clock, Car, Filter, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { LOTS, SPOTS, getDashboardStats } from '../../store/mockData';
+import { api } from '../../utils/api';
 
 export default function FindParking() {
   const navigate = useNavigate();
@@ -11,15 +11,38 @@ export default function FindParking() {
   const [toTime, setToTime] = useState('12:00');
   const [maxPrice, setMaxPrice] = useState(200);
   const [selected, setSelected] = useState(null);
+  
+  const [lots, setLots] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = LOTS.filter(lot =>
+  useEffect(() => {
+    Promise.all([
+      api.get('/lots'),
+      api.get('/sessions')
+    ]).then(([lData, sData]) => {
+      setLots(lData);
+      setSessions(sData.filter(s => s.status === 'active'));
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
+
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Searching for parking...</div>;
+
+  const filtered = lots.filter(lot =>
     lot.name.toLowerCase().includes(query.toLowerCase()) ||
     lot.address.toLowerCase().includes(query.toLowerCase())
   ).filter(lot => lot.pricePerHour <= maxPrice);
 
   const getAvailability = (lotId) => {
-    const stats = getDashboardStats(SPOTS.filter(s => s.lotId === lotId));
-    return stats;
+    const lot = lots.find(l => l.id === lotId);
+    const total = lot ? lot.totalSpots : 50;
+    const occupied = sessions.filter(s => s.lotId === lotId).length;
+    return {
+      total,
+      occupied,
+      available: Math.max(0, total - occupied)
+    };
   };
 
   return (

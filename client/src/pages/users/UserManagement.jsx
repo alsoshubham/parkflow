@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Search, CheckCircle, XCircle, Shield, Mail, Phone } from 'lucide-react';
-import { DEMO_USERS } from '../../store/mockData';
 import toast from 'react-hot-toast';
+import { api } from '../../utils/api';
 
 const ROLE_COLORS = { Admin: 'admin', Operator: 'operator', Guard: 'guard', Driver: 'driver' };
 
@@ -10,7 +10,6 @@ function UserModal({ user, onClose, onSave }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     onSave(form);
-    toast.success(user ? 'User updated' : 'User created');
     onClose();
   };
   return (
@@ -72,10 +71,18 @@ function UserModal({ user, onClose, onSave }) {
 }
 
 export default function UserManagement() {
-  const [users, setUsers] = useState(DEMO_USERS);
+  const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [modal, setModal] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/users').then(data => {
+      setUsers(data);
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
 
   const filtered = users.filter(u => {
     const matchSearch = u.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -84,23 +91,45 @@ export default function UserManagement() {
     return matchSearch && matchRole;
   });
 
-  const handleSave = (form) => {
-    if (!modal?.id) {
-      setUsers(prev => [...prev, { ...form, id: `u${Date.now()}`, created: new Date().toISOString().split('T')[0] }]);
-    } else {
-      setUsers(prev => prev.map(u => u.id === modal.id ? { ...u, ...form } : u));
+  const handleSave = async (form) => {
+    try {
+      if (!modal?.id) {
+        const newUser = await api.post('/users', form);
+        setUsers(prev => [...prev, newUser]);
+        toast.success('User created');
+      } else {
+        const updatedUser = await api.put(`/users/${modal.id}`, form);
+        setUsers(prev => prev.map(u => u.id === modal.id ? updatedUser : u));
+        toast.success('User updated');
+      }
+    } catch (e) {
+      toast.error(e.message || 'Error saving user');
     }
   };
 
-  const handleDelete = (id) => {
-    setUsers(prev => prev.filter(u => u.id !== id));
-    toast.success('User removed');
+  const handleDelete = async (id) => {
+    try {
+      await api.delete(`/users/${id}`);
+      setUsers(prev => prev.filter(u => u.id !== id));
+      toast.success('User removed');
+    } catch (e) {
+      toast.error('Error removing user');
+    }
   };
 
-  const toggleStatus = (id) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u));
-    toast.success('Status updated');
+  const toggleStatus = async (id) => {
+    try {
+      const user = users.find(u => u.id === id);
+      const newStatus = user.status === 'active' ? 'inactive' : 'active';
+      const updatedUser = await api.put(`/users/${id}`, { status: newStatus });
+      setUsers(prev => prev.map(u => u.id === id ? updatedUser : u));
+      toast.success('Status updated');
+    } catch (e) {
+      toast.error('Error updating status');
+    }
   };
+
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Loading users...</div>;
 
   return (
     <div>

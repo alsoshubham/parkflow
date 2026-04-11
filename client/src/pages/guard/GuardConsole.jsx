@@ -1,61 +1,70 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ShieldCheck, LogIn, LogOut, Car, Clock, Search, Hash, Activity, AlertTriangle } from 'lucide-react';
-import { LOTS, SESSIONS } from '../../store/mockData';
 import { useNotifications } from '../../contexts/NotificationContext';
 import toast from 'react-hot-toast';
+import { api } from '../../utils/api';
 
 export default function GuardConsole() {
   const { addNotification } = useNotifications();
-  const [sessions, setSessions] = useState(SESSIONS);
+  const [sessions, setSessions] = useState([]);
+  const [lots, setLots] = useState([]);
   const [entryVehicle, setEntryVehicle] = useState('');
-  const [entryLot, setEntryLot] = useState('l1');
+  const [entryLot, setEntryLot] = useState('');
   const [exitSearch, setExitSearch] = useState('');
   const [mode, setMode] = useState('entry');
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/sessions'),
+      api.get('/lots')
+    ]).then(([sessData, lotsData]) => {
+      setSessions(sessData);
+      setLots(lotsData);
+      if (lotsData.length > 0) setEntryLot(lotsData[0].id);
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
 
   const activeSessions = sessions.filter(s => s.status === 'active');
   const closedSessions = sessions.filter(s => s.status === 'closed');
 
-  const handleEntry = (e) => {
+  const handleEntry = async (e) => {
     e.preventDefault();
     if (!entryVehicle.trim()) return;
-    const newSession = {
-      id: `S${Date.now()}`,
-      vehicleNo: entryVehicle.toUpperCase(),
-      lotId: entryLot,
-      spotId: `${entryLot}-A${Math.floor(Math.random() * 20) + 1}`,
-      entryTime: new Date().toISOString().slice(0, 16),
-      exitTime: null,
-      status: 'active',
-      guardId: 'u3',
-      amount: null,
-    };
-    setSessions(prev => [newSession, ...prev]);
-    addNotification({ type: 'entry', title: 'Vehicle Entry', desc: `${newSession.vehicleNo} entered ${LOTS.find(l => l.id === entryLot)?.name}` });
-    toast.success(`✅ ${newSession.vehicleNo} entered successfully`);
-    setEntryVehicle('');
+    try {
+      const newSession = await api.post('/sessions/entry', {
+        vehicleNo: entryVehicle.toUpperCase(),
+        lotId: entryLot,
+        spotId: `${entryLot}-A${Math.floor(Math.random() * 20) + 1}`,
+      });
+      setSessions(prev => [newSession, ...prev]);
+      addNotification({ type: 'entry', title: 'Vehicle Entry', desc: `${newSession.vehicleNo} entered ${lots.find(l => l.id === entryLot)?.name}` });
+      toast.success(`✅ ${newSession.vehicleNo} entered successfully`);
+      setEntryVehicle('');
+    } catch (err) {
+      toast.error('Failed to log entry');
+    }
   };
 
-  const handleExit = (sessionId) => {
-    setSessions(prev => prev.map(s => {
-      if (s.id === sessionId) {
-        const entry = new Date(s.entryTime);
-        const now = new Date();
-        const hours = Math.max(1, Math.round((now - entry) / (1000 * 60 * 60)));
-        const lot = LOTS.find(l => l.id === s.lotId);
-        const amount = hours * (lot?.pricePerHour || 40);
-        addNotification({ type: 'exit', title: 'Vehicle Exited', desc: `${s.vehicleNo} – ₹${amount} charged` });
-        toast.success(`🚗 ${s.vehicleNo} exited – ₹${amount} charged`);
-        return { ...s, exitTime: now.toISOString().slice(0, 16), status: 'closed', amount };
-      }
-      return s;
-    }));
+  const handleExit = async (sessionId) => {
+    try {
+      const updatedSession = await api.put(`/sessions/${sessionId}/exit`, {});
+      setSessions(prev => prev.map(s => s.id === sessionId ? updatedSession : s));
+      addNotification({ type: 'exit', title: 'Vehicle Exited', desc: `${updatedSession.vehicleNo} – ₹${updatedSession.amount} charged` });
+      toast.success(`🚗 ${updatedSession.vehicleNo} exited – ₹${updatedSession.amount} charged`);
+    } catch (err) {
+      toast.error('Failed to log exit');
+    }
   };
 
-  const lotName = (id) => LOTS.find(l => l.id === id)?.name || id;
+  const lotName = (id) => lots.find(l => l.id === id)?.name || id;
 
   const filteredExit = exitSearch
     ? activeSessions.filter(s => s.vehicleNo.toLowerCase().includes(exitSearch.toLowerCase()))
     : activeSessions;
+    
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Loading guard console...</div>;
 
   return (
     <div>
@@ -123,7 +132,7 @@ export default function GuardConsole() {
               <div className="form-group">
                 <label className="form-label">Parking Lot</label>
                 <select className="form-input form-select" value={entryLot} onChange={e => setEntryLot(e.target.value)}>
-                  {LOTS.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                  {lots.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                 </select>
               </div>
               <button type="submit" className="btn btn-success w-full" style={{ justifyContent: 'center', padding: '14px', fontSize: 15 }}>

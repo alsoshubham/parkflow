@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, ParkingSquare, MapPin, DollarSign, CheckCircle, XCircle } from 'lucide-react';
-import { LOTS, SPOTS, getDashboardStats } from '../../store/mockData';
+
 import toast from 'react-hot-toast';
 
 function LotModal({ lot, onClose, onSave }) {
@@ -58,19 +58,33 @@ function LotModal({ lot, onClose, onSave }) {
 }
 
 export default function LotManagement() {
-  const [lots, setLots] = useState(LOTS);
+  const [lots, setLots] = useState([]);
   const [modal, setModal] = useState(null); // null | 'add' | lot object
-  const spots = SPOTS;
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    import('../../utils/api').then(({ api }) => {
+      api.get('/lots').then(data => {
+        setLots(data);
+        setLoading(false);
+      });
+    });
+  }, []);
 
-  const handleSave = (form) => {
+  const handleSave = async (form) => {
+    const { api } = await import('../../utils/api');
     if (modal === 'add') {
-      setLots(prev => [...prev, { ...form, id: `l${Date.now()}`, zones: ['A'] }]);
+      const newLot = await api.post('/lots', { ...form, zones: ['A'] });
+      setLots(prev => [...prev, newLot]);
     } else {
-      setLots(prev => prev.map(l => l.id === modal.id ? { ...l, ...form } : l));
+      const updatedLot = await api.put(`/lots/${modal.id}`, form);
+      setLots(prev => prev.map(l => l.id === modal.id ? updatedLot : l));
     }
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
+    const { api } = await import('../../utils/api');
+    await api.delete(`/lots/${id}`);
     setLots(prev => prev.filter(l => l.id !== id));
     toast.success('Lot removed');
   };
@@ -116,9 +130,9 @@ export default function LotManagement() {
       {/* Lot Cards */}
       <div className="grid-2" style={{ gap: 20 }}>
         {lots.map(lot => {
-          const ls = getDashboardStats(spots.filter(s => s.lotId === lot.id));
-          const pct = lot.totalSpots ? Math.round((ls.occupied / lot.totalSpots) * 100) : 0;
-          const fillColor = pct > 85 ? 'var(--color-red)' : pct > 60 ? 'var(--color-amber)' : 'var(--color-emerald)';
+          const ls = { available: lot.totalSpots || 0, occupied: 0 };
+          const pct = 0;
+          const fillColor = 'var(--color-emerald)';
           return (
             <div key={lot.id} className="glass-card" style={{ padding: 24 }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>

@@ -1,15 +1,30 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CalendarCheck, Filter, Search, Eye } from 'lucide-react';
-import { BOOKINGS, LOTS } from '../../store/mockData';
 import { useAuth } from '../../contexts/AuthContext';
+import { api } from '../../utils/api';
 
 export default function MyBookings() {
   const { user } = useAuth();
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [bookings, setBookings] = useState([]);
+  const [lots, setLots] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   const isAdmin = user?.role === 'Admin';
-  const bookings = isAdmin ? BOOKINGS : BOOKINGS.filter(b => b.userId === user?.id);
+
+  useEffect(() => {
+    Promise.all([
+      api.get('/bookings'),
+      api.get('/lots')
+    ]).then(([bkData, lotData]) => {
+      setBookings(bkData);
+      setLots(lotData);
+      setLoading(false);
+    }).catch(console.error);
+  }, []);
+
+  if (loading) return <div style={{ padding: 40, color: '#fff' }}>Loading bookings...</div>;
 
   const filtered = bookings.filter(b => {
     const matchFilter = filter === 'all' || b.status === filter;
@@ -18,7 +33,7 @@ export default function MyBookings() {
     return matchFilter && matchSearch;
   });
 
-  const getLotName = (id) => LOTS.find(l => l.id === id)?.name || id;
+  const getLotName = (id) => lots.find(l => l.id === id)?.name || id;
 
   return (
     <div>

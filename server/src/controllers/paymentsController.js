@@ -19,6 +19,7 @@ export const paymentsController = {
       txnId: `TXN${Date.now()}`,
     };
     db.payments.push(payment);
+    db.save();
     res.status(201).json(payment);
   },
 };
